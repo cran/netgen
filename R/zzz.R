@@ -4,6 +4,11 @@
 #' @import ggplot2
 #' @import checkmate
 #' @import lpSolve
-#' @import igraph
+#' @import stats
+#' @import utils
+#' @importFrom igraph graph.data.frame
+#' @importFrom igraph V
+#' @importFrom igraph V<-
+#' @importFrom igraph maximum.bipartite.matching
 #' @import stringr
 NULL
