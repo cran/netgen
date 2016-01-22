@@ -1,3 +1,18 @@
+netgen v1.3 (Release data: 2016-01-16):
+===========
+* Default number of digits for exportToTSPlibFormat is 10 now
+* Added function isEuclidean
+* rescaleNetwork now supports instances with depots
+* rescaleNetwork now recomputes distance matrix
+* rescaleNetwork throws error on non-euclidean networks
+* Added function getTSPInstancesOverview to get an overview of files in TSPlib
+  format
+* Added function filterTSPInstances which allows to subset/filter TSP instances
+  in TSPlib format by properties.
+* Networks have an additional property edge.weight.type now (see TSPlib documentation
+  for details)
+* Added function getValidEdgeWeightTypes
+
 netgen v1.2 (Release data: 2015-11-24):
 ===========
 
