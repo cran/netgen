@@ -19,7 +19,22 @@ makeConvexCombination = function(coords1, coords2, alpha) {
 #   Second numeric vector.
 # @return [numeric(1)]
 euklideanDistance = function(x, y) {
-  sqrt(sum((x - y)^2))
+  sqrt(crossprod(x - y))
+}
+
+# Computes the euclidean distance between a vector a a matrix.
+#
+# @param x [numeric]
+#   First numeric vector.
+# @param y [numeric]
+#   Numeric matrix.
+# @return [numeric]
+euklideanDistances = function(x, y) {
+  assertNumeric(x, min.len = 2L, any.missing = FALSE, all.missing = FALSE)
+  assertMatrix(y, any.missing = FALSE, all.missing = FALSE, ncols = length(x))
+  sapply(1:nrow(y), function(i) {
+    euklideanDistance(x, y[i, ])
+  })
 }
 
 # Generate random string.
@@ -48,19 +63,4 @@ generateName = function(n.points, n.dim, n.cluster = 1L) {
     generateRandomString(),
     sep = "_"
   )
-}
-
-#' @title Quote variables to create a list of unevaluated expressions for later evaluation.
-#'
-#' @description This function is used by \code{filterTSPInstances} to pass
-#' unevaluated expressions.
-#'
-#' @param ... [any]
-#'   Unevaluated expressions to be recorded.
-#' @return List of symbol and language primitives.
-#' @aliases . quoted
-#' @rdname quoted
-#' @export
-. = function (...){
-  structure(as.list(match.call()[-1]), class = "quoted")
 }

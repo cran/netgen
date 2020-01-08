@@ -24,22 +24,29 @@ test_that("filterTSPInstances works as a filter", {
   n = length(actual.files)
 
   # check for dimension
-  df = filterTSPInstances(testdata, expr = .(dimension > 100))
+  df = filterTSPInstances(testdata, expr = quote(dimension > 100))
   expect_is(df, "data.frame")
   expect_true(nrow(df) < n)
   expect_true(all(df$dimension > 100))
 
   # check for more complicated subset
   df = filterTSPInstances(testdata,
-    expr = .(dimension >= 100 & dimension <= 1000 & edge_weight_type == "EUC_2D"))
+    expr = quote(dimension >= 100 & dimension <= 1000 & edge_weight_type == "EUC_2D"))
   expect_is(df, "data.frame")
   expect_true(nrow(df) < n)
   expect_true(all(df$dimension >= 100 & df$dimension <= 1000))
   expect_true(all(df$edge_weight_type == "EUC_2D"))
+  expect_true(all(is.logical(df$opt.tour.known)))
+  expect_true(all(is.logical(df$opt.length.known)))
+
+  # check if we get only tours with optimal values known (only a280.tsp in our testdata)
+  df = filterTSPInstances(testdata, expr = TRUE, opt.known = TRUE)
+  expect_is(df, "data.frame")
+  expect_equal(nrow(df), 1L)
 
   # check for paths only
   df = filterTSPInstances(testdata,
-    expr = .(dimension > 100),
+    expr = quote(dimension > 100),
     paths.only = TRUE)
   expect_true(is.character(df))
   expect_true(length(df) > 0)

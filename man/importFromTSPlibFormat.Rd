@@ -4,7 +4,8 @@
 \alias{importFromTSPlibFormat}
 \title{Import network from (extended) TSPlib format.}
 \usage{
-importFromTSPlibFormat(filename, round.distances = TRUE)
+importFromTSPlibFormat(filename, round.distances = TRUE,
+  read.opt = TRUE)
 }
 \arguments{
 \item{filename}{[\code{character(1)}]\cr
@@ -12,6 +13,11 @@ Path to TSPlib file.}
 
 \item{round.distances}{[\code{logical(1)}]\cr
 Should the distances of EUC_2D instances be rounded to the nearest integer value?
+Default is \code{TRUE}.}
+
+\item{read.opt}{[\code{logical(1)}]\cr
+Should the optimal tour length (in file filename.opt) and the optimal
+tour (in file filename.tour) be loaded if avialable?
 Default is \code{TRUE}.}
 }
 \value{
@@ -25,4 +31,3 @@ Import network from (extended) TSPlib format.
 The extended TSPlib contains additional specification parts and a cluster
 membership section. Currently only the import of symmetric TSP instances is possible.
 }
-

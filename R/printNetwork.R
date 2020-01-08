@@ -6,7 +6,14 @@ print.Network = function(x, ...) {
   catf("Name:               %s", x$name)
   catf("Comment(s):         %s", collapse(x$comment, "\n"))
   catf("Edge weight type:   %s", x$edge.weight.type)
+  catf("Node weights:       %s", if (!is.null(x$node.weights)) "yes" else "no")
   catf("Number of nodes:    %i", getNumberOfNodes(x))
+  if (!is.null(x$opt.tour.length)) {
+    catf("Optimal tour length: %f", x$opt.tour.length)
+  }
+  if (!is.null(x$opt.tour)) {
+    catf("Optimal tour:        %s", paste0(collapse(head(x$opt.tour), sep = ", "), ", ..."))
+  }
   if (clustered) {
     catf("Number of clusters: %i", getNumberOfClusters(x))
   }

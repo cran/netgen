@@ -15,6 +15,8 @@ test_that("all of our plots produce nice gglot2 objects", {
   expect_is_ggplot(autoplot(x))
   expect_is_ggplot(autoplot(x, path = sample(1:20)))
   expect_is_ggplot(autoplot(x, path = sample(1:10), close.path = TRUE, path.colour = "tomato"))
+  expect_is_ggplot(autoplot(x, path = list(a = sample(1:10), b = sample(1:10))))
+  expect_is_ggplot(autoplot(x, path = list(sample(1:10), sample(1:10))))
 
   # no cluster, with depots
   x = generateRandomNetwork(n.points = 20L, n.depots = 2L, upper = 100)
@@ -46,5 +48,8 @@ test_that("all of our plots produce nice gglot2 objects", {
   y = generateClusteredNetwork(n.points = 10L, n.cluster = 2L)
   pm = netgen::getOptimalPointMatching(x$coordinates, y$coordinates)
   pl = visualizePointMatching(x, y, pm, highlight.longest = 3L)
+  expect_is_ggplot(pl)
+  # should work when passing matrices only as well
+  pl = visualizePointMatching(x$coordinates, y$coordinates, pm, highlight.longest = 3L)
   expect_is_ggplot(pl)
 })

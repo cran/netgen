@@ -13,17 +13,26 @@
 #'   available:
 #'   \describe{
 #'     \item{lp}{Solves the problem be means of linear programming with the
-#'     \pkg{lpSolve} package. This is the default.}
+#'     \pkg{lpSolve} package to optimality. This is the default.}
 #'     \item{push_relabel}{The assignment problem can be formulated as a
 #'     matching problem on bipartite graphs. This method makes use of the
-#'     push-relabel algorithm from the \pkg{igraph}.}
-#'     \item{random}{Random point matching.}
+#'     push-relabel algorithm from the \pkg{igraph}. Solves to optimality.}
+#'     \item{random}{Random point matching. Just for comparisson.}
+#'     \item{greedy}{Greedy point matching, i.e., iterativeely assign two unmatched
+#'     points with minimal euclidean distance.}
 #'   }
-#' @return [\code{matrix}]
-#'   Each row consists of the indizes of the pairwise matchings.
+#' @param full.output [\code{logical(1)}]\cr
+#'   Should optimization process information, e.g., the weight of the best matching,
+#'   be returned?
+#'   Default is \code{FALSE}.
+#' @return [\code{matrix | list}]
+#'   Either a matrix where each row consists of the indizes of the pairwise
+#'   assigned points.
+#'   If \code{full.output = TRUE} a list is returned with the assignment matrix \dQuote{pm},
+#'   the method \dQuote{method} and the optimal weight \dQuote{opt.weight}.
 #' @seealso \code{\link{visualizePointMatching}}
 #' @export
-getOptimalPointMatching = function(x, y, method = "lp") {
+getOptimalPointMatching = function(x, y, method = "lp", full.output = FALSE) {
   coords1 = x
   coords2 = y
   if (isNetwork(x)) {
@@ -45,13 +54,25 @@ getOptimalPointMatching = function(x, y, method = "lp") {
   mapping = list(
     "lp" = getPointMatchingBySolvingLP,
     "push_relabel" = getPointMatchingByPushRelabelAlgorithm,
+    "greedy" = getGreedyPointMatching,
     "random" = getRandomPointMatching
   )
 
   assertChoice(method, choices = names(mapping))
+  assertFlag(full.output)
 
   matching.algorithm = mapping[[method]]
-  return(matching.algorithm(coords1, coords2))
+  st = system.time({
+    assignment = matching.algorithm(coords1, coords2)
+  }, gcFirst = TRUE)
+  if (!full.output)
+    return(assignment)
+  return(list(
+    assignment = assignment,
+    opt.weight = getMatchingWeight(assignment, coords1, coords2),
+    opt.time = st[3L],
+    opt.method = method
+  ))
 }
 
 # Solve assignement problem by means of linear programming with the lpSolve
@@ -64,8 +85,12 @@ getPointMatchingBySolvingLP = function(coords1, coords2) {
     }
   }
 
-  requirePackages("lpSolve", why = "netgen::getPointMatchingBySolvingLP")
-  lp.res = lp.assign(dist.matrix)
+  if (!requireNamespace("lpSolve", quietly = TRUE)) {
+    BBmisc::stopf("Package 'lpSolve' required, but not available. Please install it.")
+  }
+
+  #requirePackages("lpSolve", why = "netgen::getPointMatchingBySolvingLP")
+  lp.res = lpSolve::lp.assign(dist.matrix)
   if (lp.res$status != 0) {
     stop("Failed to find LP solution! No point matching possible.")
   }
@@ -130,4 +155,49 @@ getRandomPointMatching = function(coords1, coords2) {
   ids = 1:nrow(coords1)
   matching = matrix(c(ids, sample(ids)), ncol = 2L)
   return(matching)
+}
+
+# greedy point matching
+getGreedyPointMatching = function(coords1, coords2) {
+  n = nrow(coords1)
+
+  # get list of distances: each list entry contains the
+  # distances from one point of coords1 to all points of coords
+  dist1to2 = lapply(seq_len(nrow(coords1)), function(i) {
+    euklideanDistances(coords1[i, ], coords2)
+  })
+
+  # initialize matching coords1 -> coords2
+  matching = matrix(c(1:n, rep(NA, n)), byrow = FALSE, ncol = 2L)
+
+  # now iterate over all points in coords1 and determine the point
+  # index of a point in coords2 with minimal distance in a greedy fashion
+  for (i in seq_len(n)) {
+    idx.minimal = which.min(unlist(lapply(dist1to2, function(x) min(x, na.rm = TRUE)))) # (*)
+    idx.matching.partner = which.min(dist1to2[[idx.minimal]])
+    matching[idx.minimal, 2L] = idx.matching.partner
+
+    # now we need to remove the matching partner from all remaining
+    # distances since it cannot be selected. We do so by setting it to NA.
+
+    for (j in seq_len(n)[-idx.minimal]) {
+      if (is.finite(dist1to2[[j]][1L]) | is.na(dist1to2[[j]][1L])) {
+        # assure that this is skipped in line (*)
+        dist1to2[[j]][matching[idx.minimal, 2L]] = NA
+      }
+    }
+
+    # this point should not be selected again
+    dist1to2[[idx.minimal]] = Inf
+  }
+  return(matching)
+}
+
+getMatchingWeight = function(pm, coords1, coords2) {
+  n = nrow(pm)
+  matched.coords = coords2[pm[, 2L], ]
+  weights = sapply(seq_len(n), function(i) {
+    euklideanDistance(coords1[i, ], matched.coords[i, ])
+  })
+  return(sum(weights))
 }

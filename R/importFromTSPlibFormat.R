@@ -8,13 +8,19 @@
 #' @param round.distances [\code{logical(1)}]\cr
 #'   Should the distances of EUC_2D instances be rounded to the nearest integer value?
 #'   Default is \code{TRUE}.
+#' @param read.opt [\code{logical(1)}]\cr
+#'   Should the optimal tour length (in file filename.opt) and the optimal
+#'   tour (in file filename.tour) be loaded if avialable?
+#'   Default is \code{TRUE}.
 #' @return [\code{Network}]
 #'   Network object.
 #' @export
-importFromTSPlibFormat = function(filename, round.distances = TRUE) {
+importFromTSPlibFormat = function(filename, round.distances = TRUE,
+  read.opt = TRUE) {
   requirePackages("stringr", why = "netgen::importFromTSPlibFormat")
-  assertFile(filename, access = "r")
+  assertFileExists(filename, access = "r")
   assertFlag(round.distances)
+  assertFlag(read.opt)
 
   fh = file(filename, open = "r")
   on.exit(close(fh))
@@ -39,12 +45,35 @@ importFromTSPlibFormat = function(filename, round.distances = TRUE) {
     if (line == "EDGE_WEIGHT_SECTION") {
       network = readEdgeWeightsSection(fh, network, n.points)
     }
+    if (line == "NODE_WEIGHT_SECTION") {
+      network[["node_weights"]] = readNodeWeightsSection(fh, n.points)
+    }
     line = str_trim(readLines(fh, 1L))
   }
 
   # postprocessing
   network$edge_weights = getNetworkEdgeWeights(network, round.distances)
   network$coordinates = getNetworkCoordinates(network)
+
+  # check if optimal tour length / tour itself is available
+  opt.tour = NULL
+  opt.tour.length = NULL
+  if (read.opt) {
+    filename.opt = paste0(filename, ".opt")
+    if (file.exists(filename.opt)) {
+      res = try({opt.tour.length = as.numeric(readLines(filename.opt))}, silent = TRUE)
+      if (inherits(res, "try-error")) {
+        warningf("Error reading optimal tour length for instance %s.", filename)
+      }
+    }
+    filename.opt = paste0(filename, ".tour")
+    if (file.exists(filename.opt)) {
+      res = try({opt.tour = as.integer(read.csv(filename.opt, sep = ",", header = FALSE))})
+      if (inherits(res, "try-error")) {
+        warningf("Error reading optimal tour for instance %s.", filename)
+      }
+    }
+  }
 
   # finally generate netgen {Clustered}Network object
   makeNetwork(
@@ -54,8 +83,11 @@ importFromTSPlibFormat = function(filename, round.distances = TRUE) {
     distance.matrix = network$edge_weights,
     lower = if (!is.null(network$lower)) as.numeric(network$lower) else NULL,
     upper = if (!is.null(network$upper)) as.numeric(network$upper) else NULL,
+    opt.tour.length = opt.tour.length,
+    opt.tour = opt.tour,
     membership = network$membership,
-    edge.weight.type = network$edge_weight_type
+    edge.weight.type = network$edge_weight_type,
+    node.weights = network$node_weights
   )
 }
 
@@ -441,4 +473,9 @@ readExplicitEdgeWeights = function(fh, n) {
 readClusterSection = function(fh, n) {
   membership = as.integer(scan(fh, nmax = n, quiet = TRUE))
   return(membership)
+}
+
+readNodeWeightsSection = function(fh, n) {
+  weights = scan(fh, nmax = 2 * n, quiet = TRUE)
+  weights[seq(2, 2 * n, by = 2L)]
 }
